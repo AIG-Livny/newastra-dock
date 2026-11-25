@@ -1,0 +1,7 @@
+[alias]
+        hist = log @{u} --graph --decorate --oneline -10
+        st = status
+[safe]
+	directory = /astra
+[core]
+	pager = cat

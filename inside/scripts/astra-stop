@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Команда astra-stop для остановки
+
+cd $APP_RUN_PATH && ./Stopall

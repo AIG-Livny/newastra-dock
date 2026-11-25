@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd $APP_SRC_PATH/src
+find ts/pssweb/ -name '*.ts' -printf "%P\n" | xargs -I {} sh -c 'echo "Run: {}"; astra-test pssweb/{}'

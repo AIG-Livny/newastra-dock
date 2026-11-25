@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Команда astra-build для сборки. Запрещаем использовать без аргументов, чтобы не запустить случайно.
+# buildFromScratch в stable и stand нуждается в патче, временно исправляем и возвращаем обратно.
+# (Комментируем строки PG_CONNECT_STRING на время запуска скрипта)
+
+cd $APP_SRC_PATH
+if [ $# -eq 0 ]; then
+   echo "ERROR: No argument provided"
+   ./buildFromScratch.sh x --help
+   exit 1
+fi
+
+if is_based_on trunk; then
+   MAKE_J=$BUILD_THREADS_NUM TEST_J=1 ./buildFromScratch.sh $CONNECT_STRING $@
+else
+   sed -i 's@PG_CONNECT_STRING=\"@#PG_CONNECT_STRING=\"@g' ./buildFromScratch.sh
+   sed -i 's@PG_CONNECT_STRING_ARX=\"@#PG_CONNECT_STRING_ARX=\"@g' ./buildFromScratch.sh
+   MAKE_J=$BUILD_THREADS_NUM TEST_J=1 ./buildFromScratch.sh $CONNECT_STRING $@
+   git restore ./buildFromScratch.sh
+fi

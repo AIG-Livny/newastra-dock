@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Автодополнение для удобства
+
+_astra_build_completions() {
+    local curr_word="${COMP_WORDS[COMP_CWORD]}"
+    local options=("--quiet" "--help" "--build_external_libs" "--configlibs" "--buildlibs" "--configastra" "--buildastra" "--createtcl" "--createdb" "--runtests")
+
+    COMPREPLY=($(compgen -W "${options[*]}" -- "$curr_word"))
+}
+
+complete -F _astra_build_completions astra-build

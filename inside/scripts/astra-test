@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# unbuffer сохраняет оригинальный цвет текста, а iconv переводит в UTF-8
+#
+
+cd $APP_SRC_PATH/src
+LC_ALL=C unbuffer ./tscript.sh ts/$@ | iconv -f CP866 -t UTF-8

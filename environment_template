@@ -1,0 +1,62 @@
+# Шаблон для генерации /etc/environment файла
+
+# Проброс из config в конечный контейнер
+export INSIDE_PATH=${INSIDE_PATH}
+export APP_SRC_PATH=${APP_SRC_PATH}
+export APP_RUN_PATH=${APP_RUN_PATH}
+
+export BUILD_THREADS_NUM=5
+export LANG=ru_RU.UTF-8
+export NLS_LANG=AMERICAN_CIS.RU8PC866
+export NLS_DATE_FORMAT=RRMMDD
+
+export PATH=\
+/usr/local/sbin:\
+/usr/local/bin:\
+/usr/sbin:/usr/bin:\
+/sbin:\
+/bin:\
+/usr/lib/oracle/19.5/client64/bin:\
+${INSIDE_PATH}/scripts
+
+export ENABLE_SHARED=0
+export BUILD_TESTS=1
+export ENABLE_ORACLE=1
+export CPP_STD_VERSION=c++17
+export XP_NO_RECHECK=1
+export PLATFORM=m64
+export MY_LOCAL_LDFLAGS=-gz
+export LOCALCC=gcc-8
+export LOCALCXX=g++-8
+export ORACLE_OCI_VERSION=11G
+export ORACLE_INSTANT=/opt/astra/oraic64
+export TZ=Europe/Moscow
+export ORACLE_HOME=/usr/lib/oracle/19.5/client64
+export ORACLE_PATH=/usr/lib/oracle/19.5/client64:/inside
+export LOCALCFLAGS=-I/usr/include/oracle/19.5/client64
+export ICU_TIMEZONE_FILES_DIR=${APP_SRC_PATH}/tzdata/current
+export BOOST=${APP_SRC_PATH}/externallibs/boost
+export EXTRA_LIBS=-lrt
+export LIBROOT=${APP_SRC_PATH}/locallibs
+
+export MY_LOCAL_CFLAGS='-g2 -O0 -gas-loc-support -gno-as-locview-support -gno-column-info -gno-statement-frontiers -gno-variable-location-views -gno-inline-points -gz -Wno-maybe-uninitialized -DBOOST_NO_CXX11_SCOPED_ENUMS -DBOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS -DBOOST_FILESYSTEM_DEPRECATED -DBOOST_NO_AUTO_PTR'
+
+export LD_LIBRARY_PATH=\
+/usr/lib/oracle/19.5/client64/lib:\
+${APP_SRC_PATH}/externallibs/libxml2/lib:\
+${APP_SRC_PATH}/externallibs/icu/lib:\
+${APP_SRC_PATH}/externallibs/libxml2/lib:\
+${APP_SRC_PATH}/externallibs/libxslt/lib:\
+${APP_SRC_PATH}/externallibs/boost/lib:\
+${APP_SRC_PATH}/externallibs/check/lib:\
+${APP_SRC_PATH}/externallibs/amqpcpp/lib
+
+export PKG_CONFIG_PATH=\
+${APP_SRC_PATH}/externallibs/icu/lib/pkgconfig:\
+${APP_SRC_PATH}/externallibs/libxml2/lib/pkgconfig:\
+${APP_SRC_PATH}/externallibs/libxslt/lib/pkgconfig:\
+${APP_SRC_PATH}/externallibs/boost/lib/pkgconfig:\
+${APP_SRC_PATH}/externallibs/check/lib/pkgconfig:\
+${APP_SRC_PATH}/externallibs/amqpcpp/lib/pkgconfig
+
+export TERM=xterm-256color

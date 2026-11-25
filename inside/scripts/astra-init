@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Команда astra-init для подготовки run директории
+# sed меняет пути на актуальные и оставляет только один обработчик для дебаггера
+
+rm -rf $APP_RUN_PATH
+mkdir $APP_RUN_PATH
+ln -s $APP_SRC_PATH/locallibs $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/ts $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/astra $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/locallibs/serverlib/src/supervisor $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/locallibs/serverlib/src/dispatcher $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/tscriptc $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/tscript.sh $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/nosir.tcl $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/run.sh $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/src/create_local_tcl.sh $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/RUN_EXAMPLE/astra.tcl $APP_RUN_PATH/
+ln -s $INSIDE_PATH/supervisor.tcl $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/RUN_EXAMPLE/run $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/RUN_EXAMPLE/Stopall $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/RUN_EXAMPLE/Restart $APP_RUN_PATH/
+ln -s $APP_SRC_PATH/RUN_EXAMPLE/date_time_zonespec.csv $APP_RUN_PATH/
+cp $APP_SRC_PATH/RUN_EXAMPLE/new_astra $APP_RUN_PATH/
+
+sed -i 's@\$HOME/Astra2007/src/astra@$APP_SRC_PATH/src/astra@g' $APP_RUN_PATH/new_astra
+sed -i 's@\$HOME/RUN@$APP_RUN_PATH@g' $APP_RUN_PATH/new_astra
+cd $APP_RUN_PATH
+
+XP_TESTING_FILES="$APP_SRC_PATH/src/tests" XP_TESTING_FILES_SERVERLIB="$APP_SRC_PATH/locallibs/serverlib/src/testdata" OURNAME="ASTRA" LIBROOT="$APP_RUN_PATH/locallibs" ./create_local_tcl.sh
+sed -i 's@grp2_Inet(OBRZAP_NUM) 5@grp2_Inet(OBRZAP_NUM) 0@g' $APP_RUN_PATH/local_before.tcl
+sed -i 's@grp3_Jxt(OBRZAP_NUM) 15@grp3_Jxt(OBRZAP_NUM) 1@g' $APP_RUN_PATH/local_before.tcl
+sed -i 's@grp8_Http(OBRZAP_NUM) 1@grp8_Http(OBRZAP_NUM) 0@g' $APP_RUN_PATH/local_before.tcl
+
+ln -sf $APP_RUN_PATH/local_before.tcl $APP_SRC_PATH/src/local_before.tcl
+ln -sf $APP_RUN_PATH/local_after.tcl $APP_SRC_PATH/src/local_after.tcl

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+#
+# Usage: if is_old_boost; then
+#
+
+if [ -z "$(grep '107600' $APP_SRC_PATH/bin/update_and_build_boost.sh)" ]; then
+    # Old boost
+    return 0
+else
+    # New boost
+    return 1
+fi

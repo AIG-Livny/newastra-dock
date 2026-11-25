@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Команда astra-delete-user удаляет пользователя, аргументы: пульт
+
+if [ $# -eq 0 ]; then
+   echo "ERROR: No argument. Argument is: TERMINAL"
+   exit 1
+fi
+
+QRY="
+DELETE FROM user_roles WHERE user_id=(SELECT user_id FROM users2 WHERE desk='$1');
+DELETE FROM desk_owners WHERE desk='$1';
+DELETE FROM users2 WHERE desk='$1';
+DELETE FROM desks WHERE code='$1';
+COMMIT;
+"
+
+if is_based_on stable | is_based_on stand; then
+NLS_LANG=AMERICAN_CIS.UTF8 sqlplus -s $CONNECT_STRING <<EOF
+$QRY;
+EOF
+else
+   psql $PG_CONNECT_STRING -c "$QRY"
+fi

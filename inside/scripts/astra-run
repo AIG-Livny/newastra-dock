@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Команда astra-run для запуска, вывод из терминала в /opt/astra/run/iostream.log
+
+cd $APP_RUN_PATH && ./run > iostream.log 2>&1 &

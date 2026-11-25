@@ -1,0 +1,3 @@
+#!/bin/sh
+
+cd $APP_SRC_PATH/src && gdbserver :2000 astra ./astra.tcl -nosir -tscript $@

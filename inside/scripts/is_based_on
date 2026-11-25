@@ -1,0 +1,18 @@
+#!/bin/sh
+
+#
+# Является ли репозиторий астры <trunk|stand|stable>?
+# Или базируется на <> ?
+#
+# Usage: if is_based_on stand; then
+#
+
+RESULT=$(cd $APP_SRC_PATH && git rev-parse --abbrev-ref HEAD)
+cd $APP_SRC_PATH && git merge-base $1 $RESULT > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  # Not based
+  return 1
+else
+  # Based
+  return 0
+fi

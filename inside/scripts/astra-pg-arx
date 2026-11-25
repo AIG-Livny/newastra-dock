@@ -1,0 +1,1 @@
+psql postgresql://astra_trunk_arx:trunk@172.17.0.2:5432/astra_trunk_arx

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+_astra_test_completions() {
+    local cur dir files
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    dir="$APP_SRC_PATH/src/ts"
+
+    # Смотрим файлы и папки в корне
+    files=$(find $dir -maxdepth 1 -type f,d -printf '%P\n')
+
+    # Пытаемся найти
+    COMPREPLY=( $(compgen -W "$files" -- "$cur") )
+
+    # Если не нашли, значит искомый файл где-то глубже
+    if [[ ${#COMPREPLY[@]} -eq 0 ]]; then
+        local deep_files
+        deep_files=$(find "$dir" -type f,d -ipath "*${cur}*" -printf '%P\n')
+
+        mapfile -t COMPREPLY < <(echo "$deep_files")
+    fi
+
+    return 0
+}
+
+complete -o nospace -F _astra_test_completions astra-test

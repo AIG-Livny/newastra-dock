@@ -1,0 +1,165 @@
+#!/bin/bash
+
+set -e
+
+DIR=$(dirname $(readlink -f $0))
+
+source $DIR/config
+
+INS_HELP="Запустить экземпляр. Требуется быть в папке с $APP_NAME для запуска"
+ins(){
+  # Минимальная проверка, что находимся в папке приложения
+  if [ ! -e "./buildFromScratch.sh" ]; then
+    echo "Set current directory to app sources root"
+    exit 1
+  fi
+
+  # Собрать образ, если его нет
+  if [ -z "$(docker images -q $IMAGE_NAME 2> /dev/null)" ]; then
+    makeimg
+  else
+    # Даже если образ есть, файла environment может не быть. Это происходит, если образ был перенесён с другой машины
+    if [ ! -e "$DIR/inside/environment" ]; then
+      makeenv
+    fi
+  fi
+
+  # Генерируем номер
+  INSTANCE_NO=$(_instance_no_generator)
+
+  CONTAINER=$PREFIX-$INSTANCE_NO
+
+  # Запускаем базы
+  PG_ID=$(_run_postgres $INSTANCE_NO $PWD)
+  ORA_ID=$(_run_oracle $INSTANCE_NO $PWD)
+
+  # Если что-то пойдёт не так, удалим базы
+  trap "docker rm -f $PG_ID $ORA_ID 2>/dev/null || true" EXIT
+
+  # Берём их IP
+  PG_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $PG_ID)
+  ORA_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $ORA_ID)
+
+  declare -a docker_run_args=()
+
+  docker_run_args+=(
+    "run"
+    "-dt"
+    "--name" "$CONTAINER"
+    "-h" "$CONTAINER"
+    "-e" "HOST_APP_PATH=$PWD"
+    "-p" "0:22"
+    "-p" "0:8001/tcp"
+    "-p" "0:7700/tcp"
+    "-p" "0:8995/udp"
+    "-p" "0:8996/udp"
+    "-v" "$PWD:$APP_SRC_PATH"
+    "-v" "$DIR/inside:$INSIDE_PATH"
+    "-v" "$DIR/common/inside:$COMMON_INSIDE_PATH"
+    "--cap-add=SYS_PTRACE"
+    "--security-opt" "apparmor=unconfined"
+    "--security-opt" "seccomp=unconfined"
+    "--dns=10.1.90.138"
+    "--dns=8.8.8.8"
+    "--dns=10.1.90.145"
+    "-l" "$PREFIX.instance=$INSTANCE_NO"
+    "-l" "$PREFIX.path=$PWD"
+    "-l" "$PREFIX"
+  )
+
+  # Если подключен VPN делаем доступным внутри контейнера
+  if [ -e "/dev/net/tun" ]; then
+    docker_run_args+=("--device=/dev/net/tun:/dev/net/tun")
+  fi
+
+  # SSH agent для доступа к gitlab
+  if [[ -n "$SSH_AUTH_SOCK" ]]; then
+    docker_run_args+=(
+      "-v" "$SSH_AUTH_SOCK:/ssh-agent"
+    )
+  fi
+
+  ENV_ID=$(docker "${docker_run_args[@]}" "$IMAGE_NAME")
+  
+  # Если контейнер запустился, не нужно чистить базы
+  trap - EXIT
+  
+  PORTS=$(docker port $ENV_ID | tr '\n' ' ')
+
+  PG_CONNECT_STRING="postgresql://astra_trunk:trunk@$PG_IP:5432/astra_trunk"
+  PG_CONNECT_STRING_ARX="postgresql://astra_trunk_arx:trunk@$PG_IP:5432/astra_trunk_arx"
+  SYSPAROL="system/manager@$ORA_IP:1521/ora12"
+  CONNECT_STRING="astra_trunk/trunk@$ORA_IP:1521/ora12"
+  PG_SYSPAROL="postgres://postgres:password@$PG_IP:5432"
+
+  # Окружение экземпляра: базовый шаблон + данные, относящиеся только к этому экземпляру.
+  # Файл создаётся на хосте и копируется внутрь контейнера, поэтому экземпляры не делят
+  # один /etc/environment
+  INSTANCE_ENV=$(mktemp)
+  trap "rm -f $INSTANCE_ENV" EXIT
+
+  _render_env $INSTANCE_ENV
+
+  if [ -n "$SSH_AUTH_SOCK" ]; then
+    echo "export SSH_AUTH_SOCK=/ssh-agent" >> $INSTANCE_ENV
+  fi
+
+  {
+    echo "export PG_CONNECT_STRING='$PG_CONNECT_STRING'"
+    echo "export PG_CONNECT_STRING_ARX='$PG_CONNECT_STRING_ARX'"
+    echo "export SYSPAROL='$SYSPAROL'"
+    echo "export CONNECT_STRING='$CONNECT_STRING'"
+    echo "export PG_SYSPAROL='$PG_SYSPAROL'"
+    echo "export HOST_APP_PATH='$PWD'"
+    echo "export DOCK_PORTS='$PORTS'"
+  } >> $INSTANCE_ENV
+
+  _put_env $ENV_ID $INSTANCE_ENV
+  rm -f $INSTANCE_ENV
+  trap - EXIT
+
+  # Окружение уже в контейнере, start.sh его подхватывает
+  docker exec $ENV_ID bash -c "$INSIDE_PATH/start.sh '$DOCK_USER'"
+
+  # Открываем терминал в только что созданном контейнере. ID уже известен, поэтому не
+  # используем term (он вычисляет экземпляр через getno и спотыкается о несколько экземпляров)
+  _open_term $ENV_ID
+}
+
+_run_postgres(){
+  INSTANCE_NO=$1
+  APP_PATH=$2
+
+  # PGDATA меняем, чтобы несколько контейнеров не пользовались одними данными
+  docker run -dt \
+  --name $PREFIX-pg-$INSTANCE_NO \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=password \
+  -e PGDATA=/tmp/postgresql/data \
+  -l $PREFIX.instance=$INSTANCE_NO \
+  -l $PREFIX.path=$APP_PATH \
+  -l $PREFIX \
+  $IMAGE_POSTGRES
+}
+
+_run_oracle(){
+  INSTANCE_NO=$1
+  APP_PATH=$2
+
+  docker run -dt \
+  --name $PREFIX-ora-$INSTANCE_NO \
+  -e ORACLE_PDB=ora12 \
+  -e ORACLE_PWD=manager \
+  -e TZ="Europe/Moscow" \
+  -e ORACLE_EDITION=enterprise \
+  -e ORACLE_CHARACTERSET=RU8PC866 \
+  -l $PREFIX.instance=$INSTANCE_NO \
+  -l $PREFIX.path=$APP_PATH \
+  -l $PREFIX \
+  $IMAGE_ORACLE
+}
+
+# Подключаем общую часть в самом конце.
+# Функция kill из общей части удаляет все контейнеры экземпляра (окружение и базы),
+# т.к. фильтрует их по метке $PREFIX.instance
+source $DIR/common/common

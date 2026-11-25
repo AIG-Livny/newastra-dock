@@ -1,0 +1,6 @@
+#!/bin/sh
+
+echo Host astra path: $HOST_APP_PATH
+echo Container IP: $(hostname -I)
+echo Container Ports: $DOCK_PORTS
+git log --oneline -1

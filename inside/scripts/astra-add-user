@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Команда astra-add-user добавляет пользователя, аргументы: пульт пользователь пароль
+
+if [ $# -lt 3 ]; then
+   echo "ERROR: Arguments less than 3. Arguments are: TERMINAL USER PASSWORD"
+   exit 1
+fi
+
+SALT="kkkkkkkkkk"
+#BALLAST_LOG=$(grep -r 'BALLAST_LOG' /opt/astra/run/local_after.tcl | awk '{print substr($3,2,length($3)-2)}')
+BALLAST_LOG="TSTDCS"
+HASH=$($INSIDE_PATH/passwd_hash_gen/passwd_hash_gen $SALT $3 $BALLAST_LOG)
+DATE=$(date +'%Y-%m-%d')
+
+QRY="
+INSERT INTO desks(code,currency,grp_id,id,term_mode) VALUES ('$1','РУБ',1,(SELECT MAX(id)+1 FROM desks),'STAND');
+INSERT INTO users2(descr,desk,login,type,user_id,passwd_hash,user_salt,last_logon,wrong_passwd_attempts) VALUES ('ТЕСТ','$1','$2',0,(SELECT MAX(user_id)+1 FROM users2),'$HASH','$SALT','$DATE',0);
+INSERT INTO desk_owners(desk, id, pr_denial) VALUES ('$1',(SELECT MAX(id)+1 FROM desk_owners),0);
+INSERT INTO user_roles(id,role_id,user_id) VALUES ((SELECT MAX(id)+1 FROM user_roles), 1, (SELECT user_id FROM users2 WHERE desk='$1'));
+
+COMMIT;
+"
+
+if is_based_on stable | is_based_on stand; then
+NLS_DATE_FORMAT='YYYY-MM-DD HH24:MI:SS' NLS_LANG=AMERICAN_CIS.UTF8 sqlplus -s $CONNECT_STRING <<EOF
+$QRY;
+EOF
+else
+   psql $PG_CONNECT_STRING -c "$QRY"
+fi

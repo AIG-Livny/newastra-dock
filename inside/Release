@@ -1,0 +1,11 @@
+Origin: My Local Repository
+Label: My Local Repository
+Suite: unstable
+Codename: unstable
+Architectures: x86_64
+Components: main
+Description: My local Debian package repository
+Date: Sat, 15 Mar 2025 19:25:17 +0000
+Version: 1.0
+Acquire-By-Hash: yes
+SHA256:
